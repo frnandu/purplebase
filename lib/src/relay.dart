@@ -104,8 +104,21 @@ class RelayMessageNotifier extends StateNotifier<RelayMessage> {
     pool.send(jsonEncode(["REQ", req.subscriptionId, req.toMap()]));
   }
 
-  Future<List<Map<String, dynamic>>> queryRaw(RelayRequest req,
+  final ndk = Ndk(
+      NdkConfig(
+          eventVerifier: Bip340EventVerifier(),
+          cache: MemCacheManager(),
+          engine: NdkEngine.RELAY_SETS,
+          bootstrapRelays: ["wss://relay.zapstore.dev"]
+      )
+  );
+
+
+    Future<List<Map<String, dynamic>>> queryRaw(RelayRequest req,
       {bool failEarly = false}) async {
+        NdkResponse response = ndk.requests.query(filters: [Filter.fromMap(req.toMap())]);
+        final events = await response.future;
+        return events.map((e) => e.toJson(),).toList();
     final completer = Completer<List<Map<String, dynamic>>>();
 
     final relayUrls = failEarly ? pool.connectedRelayUrls : pool.relayUrls;
